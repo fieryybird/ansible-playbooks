@@ -1,0 +1,9 @@
+pre_install_packages:
+  - nodejs
+  - npm
+  - acl
+
+linux_user: app-user
+user_group: admin
+app_name: my-project
+app_archive_path: /home/fieryybird/Practic/IaC/Ansible/nodejs-app/nodejs-app-1.0.0.tgz

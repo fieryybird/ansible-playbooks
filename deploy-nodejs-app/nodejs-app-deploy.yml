@@ -1,0 +1,57 @@
+---
+- name: Install node and npm
+  hosts: ec2
+  become: yes
+  vars_files:
+  - vars.yaml
+  tasks:
+  - name: Update package manager
+    apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+  - name: Install packages
+    apt:
+      name: "{{item}}"
+      state: present
+    loop: "{{pre_install_packages}}"
+
+- name: Create new linux user for application
+  hosts: ec2
+  become: yes
+  gather_facts: false
+  vars_files:
+  - vars.yaml
+  tasks:
+  - name: Create nodejs-app service user
+    user:
+      name: "{{linux_user}}"
+      group: "{{user_group}}"
+    register: user_creation_result
+  - debug: msg={{user_creation_result}}
+
+- name: Deploy nodejs-app
+  hosts: ec2
+  vars_files:
+  - vars.yaml
+  become: True
+  become_user: "{{linux_user}}"
+  gather_facts: false
+  tasks:
+  - name: Copy and unpack tarfile with nodejs-app
+    unarchive: 
+      src: "{{app_archive_path}}"
+      dest: /home/{{linux_user}}
+
+  - name: Install dependencies
+    community.general.npm: 
+      path: /home/{{linux_user}}/package/ 
+
+  - name: Start app 
+    command: 
+      chdir: /home/{{linux_user}}/package/app
+      cmd: node server.js
+    async: 1000
+    poll: 0
+    
+  - name: Ensure app is running  #shell and command modules aren't idempotent
+    shell: ps aux | grep node   
+    register: app_status
+  - debug: msg={{app_status.stdout_lines}}
